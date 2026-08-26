@@ -1,8 +1,36 @@
 # 开发流程详情
 
+## 多层级开发架构
+
+### 架构概述
+
+```
+主 Session（流程统筹 Agent）
+    │
+    ├── 需求理解
+    ├── 项目分析
+    ├── GitHub 调研
+    ├── 需求拆解
+    ├── 创建子 Session
+    │
+    └── 子 Session A
+        │
+        ├── 子 Session 主 Agent（任务规划）
+        │
+        ├── 子 Agent 1（执行）
+        ├── 子 Agent 2（执行）
+        └── 子 Agent N...
+```
+
+### 流程总览
+
+```
+需求理解 → 项目分析 → GitHub 调研 → 需求拆解 → 创建子 Session → 子 Session 内部规划 → 子 Agent 执行 → 定向测试 → 验收 → 合并 → 交付
+```
+
 ## 需求理解阶段
 
-主 Agent 接收需求后，必须先理解：
+主 Session（流程统筹 Agent）接收需求后，必须先理解：
 
 1. 用户真正需要解决的问题
 2. 当前项目已具备的功能
@@ -44,7 +72,29 @@
 
 ## 需求拆解
 
-将需求拆解为最小工作单元，每个单元应满足：
+### 主 Session 拆解流程
+
+主 Session（流程统筹 Agent）将需求拆解为子 Session，每个子 Session 应满足：
+
+- 有明确的任务目标
+- 有独立的修改范围
+- 有明确的验收标准
+- 尽量减少与其他子 Session 的依赖
+
+#### 创建前检查复用
+
+- 新建前必须先查 `.m-work-flow/sessions/registry.md`
+- 存在同领域待复用 Session 时优先重新激活，不新建
+
+#### 创建可视化 Session
+
+- 在 Codex、opencode 等支持多会话的 GUI 环境中，每个子 Session 必须创建为真实、用户可见的独立会话
+- 会话名称使用稳定命名 `session-<领域名>`
+- 环境不支持多会话时，退化为内部子会话并在 `.m-work-flow/sessions/` 中留痕
+
+### 子 Session 内部拆解
+
+子 Session 主 Agent 接收任务后，将任务拆解为最小工作单元，每个单元应满足：
 
 - 有明确的输入和输出
 - 有明确的修改范围
@@ -55,14 +105,14 @@
 
 ```
 需求
-├── 模块 A
-│   ├── Agent A：后端接口
-│   └── Agent B：数据库修改
-├── 模块 B
-│   ├── Agent C：前端页面
-│   └── Agent D：资源加载
-└── 测试
-    └── Agent E：功能测试
+├── 子 Session A：后端功能
+│   ├── 子 Agent 1：API 接口
+│   └── 子 Agent 2：数据库修改
+├── 子 Session B：前端功能
+│   ├── 子 Agent 3：页面开发
+│   └── 子 Agent 4：资源加载
+└── 子 Session C：测试
+    └── 子 Agent 5：功能测试
 ```
 
 ## 防止 Agent 臆想
@@ -91,19 +141,30 @@
 
 ## 停止条件
 
-出现以下情况时，停止并向主 Agent 汇报：
+### 子 Agent 停止条件
+
+出现以下情况时，停止并向子 Session 主 Agent 汇报：
 
 - 用户需求存在歧义
 - 需求与项目现有逻辑冲突
 - 缺少完成任务必需的信息或依赖
 - 现有架构无法直接支持需求
 - 修改可能影响其他模块
-- 其他 Agent 已修改相关代码
+- 其他子 Agent 已修改相关代码
 - 无法确定行为应该如何实现
+
+### 子 Session 停止条件
+
+出现以下情况时，子 Session 主 Agent 停止并向主 Session 汇报：
+
+- 子 Session 任务与整体需求冲突
+- 子 Session 之间存在无法解决的依赖
+- 子 Agent 遇到阻塞且无法自行解决
+- 需要主 Session 决策的问题
 
 ### 正确行为
 
-**停止 → 汇报 → 等待主 Agent 决策**
+**停止 → 汇报 → 等待上级决策**
 
 不要自行扩大需求、改变架构、修改其他模块或引入新依赖。
 
@@ -115,10 +176,10 @@
 - 局部测试
 - 已有代码复用
 - GitHub 开源项目参考
-- 子 Agent 职责隔离
+- 子 Session / 子 Agent 职责隔离
 - 使用 UPDATE.MD 获取明确版本目标
-- **主 Agent 创建 `.m-work-flow` 目录存放子 Agent 需要阅读的内容**
-- **避免子 Agent 反复重读项目文件**
+- **主 Session 创建 `.m-work-flow` 目录存放子 Session 和子 Agent 需要阅读的内容**
+- **避免子 Session / 子 Agent 反复重读项目文件**
 
 ### 避免
 
@@ -129,44 +190,58 @@
 - 在用户未要求时进行性能测试
 - 重复实现已存在的成熟功能
 - 为了"可能有用"增加额外功能
-- **子 Agent 重复读取已由主 Agent 整理好的内容**
+- **子 Session / 子 Agent 重复读取已由主 Session 整理好的内容**
 
 ### .m-work-flow 目录使用规范
 
-主 Agent 在开始多 Agent 协作时，必须：
+主 Session 在开始多 Session / 多 Agent 协作时，必须：
 
 1. **创建目录结构**
    ```
    .m-work-flow/
-   ├── context/           # 子 Agent 需要阅读的上下文内容
+   ├── context/                    # 上下文内容
    │   ├── project-summary.md
    │   ├── code-structure.md
    │   └── requirements.md
-   ├── planner/           # Planner 文件
-   │   ├── task-breakdown.md
-   │   └── agent-assignment.md
-   ├── communication/     # 通信记录
-   │   ├── subagent-tasks/
-   │   └── subagent-reports/
-   └── timeline/          # 时间跟踪
+   ├── planner/                    # Planner 文件
+   │   ├── session-breakdown.md    # 主 Session 任务拆解
+   │   ├── session-assignment.md   # 子 Session 划分方案
+   │   └── agent-assignment.md     # 子 Agent 分配方案
+   ├── sessions/                   # 子 Session 工作目录
+   │   ├── registry.md             # Session 注册表（名称、领域、状态、复用次数）
+   │   ├── session-1/
+   │   │   ├── tasks/
+   │   │   ├── reports/
+   │   │   └── communication/
+   │   └── session-2/
+   │       ├── tasks/
+   │       ├── reports/
+   │       └── communication/
+   ├── communication/              # 主 Session 通信记录
+   │   ├── main-session/
+   │   └── final-reports/
+   └── timeline/                   # 时间跟踪
        └── timeout-monitor.md
    ```
 
-2. **存放子 Agent 需要阅读的内容**
+2. **存放上下文内容**
    - 项目关键文件摘要
    - 代码结构分析
    - 相关配置信息
    - 需求文档摘要
-   - 避免子 Agent 重复读取项目文件
+   - 避免子 Session / 子 Agent 重复读取项目文件
 
 3. **保存 Planner 文件**
-   - 任务拆解计划
+   - 主 Session 任务拆解计划
+   - 子 Session 划分方案
    - 子 Agent 分配方案
    - 时间预估和进度跟踪
 
 4. **记录通信内容**
-   - 主 Agent 与子 Agent 的通信记录
+   - 主 Session 与子 Session 的通信记录
+   - 子 Session 与子 Agent 的通信记录
    - 子 Agent 完成报告
+   - 子 Session 完成报告
    - 验收结果
 
 ### Git 排除规则
@@ -179,7 +254,7 @@
 ```
 
 **原因**：
-- `.m-work-flow` 是临时工作目录，包含主 Agent 和子 Agent 的通信内容
+- `.m-work-flow` 是临时工作目录，包含主 Session、子 Session 和子 Agent 的通信内容
 - 不应被提交到版本控制系统
 - 避免污染项目历史记录
 
@@ -187,24 +262,31 @@
 
 ### 流程概述
 
-当用户校验结果并反馈 BUG 或未完成内容时，主 Agent 必须按照规范流程处理，而不是直接修复。
+当用户校验结果并反馈 BUG 或未完成内容时，主 Session（流程统筹 Agent）必须按照规范流程处理，而不是直接修复。
 
 ```
-用户反馈 → 问题分析 → 任务拆解 → 分配子 Agent → 修复执行 → 验收 → 交付
+用户反馈 → 问题分析 → 创建子 Session → 子 Session 内部规划 → 子 Agent 修复 → 验收 → 交付
 ```
 
-### 主 Agent 职责
+### 主 Session 职责
 
 1. **接收反馈**：记录用户反馈的具体内容
 2. **问题分析**：分析问题原因和影响范围
-3. **任务拆解**：将修复工作拆解为明确的子任务
-4. **分配任务**：将修复任务分配给子 Agent
-5. **验收结果**：验收子 Agent 的修复结果
-6. **交付用户**：向用户交付修复结果
+3. **创建子 Session**：将修复工作创建为独立的子 Session
+4. **验收结果**：验收子 Session 的修复结果
+5. **交付用户**：向用户交付修复结果
+
+### 子 Session 职责
+
+1. **任务拆解**：将修复任务拆解为可执行的子任务
+2. **分配任务**：将修复任务分配给子 Agent
+3. **监督执行**：监督子 Agent 的修复进度
+4. **验收结果**：验收子 Agent 的修复结果
+5. **汇报主 Session**：向主 Session 汇报修复完成情况
 
 ### 任务拆解要求
 
-修复任务必须遵循标准任务边界格式：
+子 Session 在分配修复任务时必须遵循标准任务边界格式：
 
 ```
 任务：<BUG 描述或未完成内容>
@@ -226,16 +308,31 @@
 
 ### 禁止行为
 
-- 主 Agent 直接修复代码
+- 主 Session 直接修复代码
+- 子 Session 主 Agent 直接修复代码
 - 跳过任务拆解直接执行
 - 跳过验收直接交付
 - 修复范围超出用户反馈
 
 ## 超时问询机制
 
+### 多层级问询架构
+
+超时问询机制分为两个层级：
+
+#### 主 Session → 子 Session 问询
+- 主 Session 定期检查子 Session 工作状态
+- 超时时主 Session 主动向子 Session 问询
+- 问询内容：整体进度、阻塞问题、是否需要支持
+
+#### 子 Session → 子 Agent 问询
+- 子 Session 主 Agent 定期检查子 Agent 工作状态
+- 超时时子 Session 主 Agent 主动向子 Agent 问询
+- 问询内容：当前工作进度、遇到的困难、预计剩余时间
+
 ### 时间预估要求
 
-主 Agent 在分配子 Agent 任务时，必须提供完成时间预估：
+子 Session 主 Agent 在分配子 Agent 任务时，必须提供完成时间预估：
 
 1. **预估内容**
    - 任务预计完成时间
@@ -253,13 +350,13 @@
 ### 超时检查流程
 
 1. **定时检查**
-   - 主 Agent 定期检查子 Agent 工作状态
+    - 子 Session 主 Agent 定期检查子 Agent 工作状态
    - 检查时间同步到用户界面
    - 记录检查结果
 
 2. **超时问询**
-   - 当超过预估时间未收到子 Agent 通知时
-   - 主 Agent 主动向子 Agent 问询
+    - 当超过预估时间未收到子 Agent 通知时
+    - 子 Session 主 Agent 主动向子 Agent 问询
    - 问询内容包括：
      - 当前工作进度
      - 遇到的困难或阻塞
@@ -268,14 +365,15 @@
 
 3. **用户界面同步**
    - 检查时间同步到用户界面
-   - 显示子 Agent 工作状态
+    - 显示子 Agent 工作状态
    - 显示超时预警信息
 
 ### 问询格式
 
 ```
 问询时间：<当前时间>
-子 Agent：<子 Agent 名称>
+层级：<主 Session / 子 Session>
+角色：<稳定职能名称>
 任务：<任务描述>
 预估完成时间：<预估时间>
 当前状态：<状态描述>
@@ -286,13 +384,26 @@
 
 **用户反馈**："自动翻译开启后显示翻译失败"
 
-**主 Agent 处理流程**：
+**主 Session 处理流程**：
 
 1. **问题分析**：
    - 现象：自动翻译功能显示"翻译失败"
    - 可能原因：API 请求失败、状态管理问题、消息传递问题
 
-2. **任务拆解**：
+2. **创建子 Session**：
+   ```
+   子 Session：翻译功能修复
+   任务：修复自动翻译显示"翻译失败"的问题
+   负责：自动翻译相关功能
+   依赖：无
+   验收标准：
+   1. 自动翻译功能正常工作
+   2. 翻译结果正确显示
+   3. 不影响悬停翻译功能
+   4. 错误信息清晰明确
+   ```
+
+3. **子 Session 内部规划**：
    ```
    任务：修复自动翻译显示"翻译失败"的问题
    负责：content.js 中的自动翻译逻辑
@@ -306,8 +417,10 @@
    4. 错误信息清晰明确
    ```
 
-3. **分配子 Agent**：将修复任务分配给子 Agent 执行
+4. **子 Agent 执行**：子 Agent 执行修复任务
 
-4. **验收结果**：验收子 Agent 的修复结果
+5. **验收结果**：
+   - 子 Session 主 Agent 验收子 Agent 的修复结果
+   - 主 Session 验收子 Session 的整体结果
 
-5. **交付用户**：向用户交付修复结果
+6. **交付用户**：向用户交付修复结果
