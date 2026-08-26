@@ -5,42 +5,42 @@
 ### 交付流程
 
 ```
-子 Agent 完成 → 子 Session 主 Agent 验收 → 主 Session 验收 → 最终交付用户
+子 Agent 完成 → 子 Thread 主 Agent 验收 → 主 Thread 验收 → 最终交付用户
 ```
 
 ### 各层级职责
 
 #### 子 Agent
 - 完成分配的任务
-- 提交完成报告给子 Session 主 Agent
+- 提交完成报告给子 Thread 主 Agent
 
-#### 子 Session 主 Agent
+#### 子 Thread 主 Agent
 - 验收子 Agent 的完成结果
-- 汇总子 Session 内部的修改
-- 提交子 Session 完成报告给主 Session
+- 汇总子 Thread 内部的修改
+- 提交子 Thread 完成报告给主 Thread
 
-#### 主 Session（流程统筹 Agent）
-- 验收所有子 Session 的完成结果
+#### 主 Thread（流程统筹 Agent）
+- 验收所有子 Thread 的完成结果
 - 合并所有修改
-- 只测跨子 Session 交集和整体启动冒烟，复用子 Session 测试结论
+- 只测跨子 Thread 交集和整体启动冒烟，复用子 Thread 测试结论
 - 更新文档
 - 交付用户
 
-## 主 Session 合并规范
+## 主 Thread 合并规范
 
-所有子 Session 工作完成之后，由主 Session（流程统筹 Agent）负责最终合并。
+所有子 Thread 工作完成之后，由主 Thread（流程统筹 Agent）负责最终合并。
 
 ### 合并前检查
 
-1. 检查所有子 Session 的修改
-2. 检查子 Session 之间是否存在冲突
+1. 检查所有子 Thread 的修改
+2. 检查子 Thread 之间是否存在冲突
 3. 检查是否产生重复实现
 4. 检查是否存在超出需求范围的代码
 5. 检查整体项目结构
-6. 复核各级测试报告是否齐全可信，只补测跨子 Session 交集缺口和整体启动冒烟
+6. 复核各级测试报告是否齐全可信，只补测跨子 Thread 交集缺口和整体启动冒烟
 7. 确认最终结果符合用户需求
 
-**主 Session 不应直接机械拼接所有子 Session 的代码。最终代码必须作为一个完整项目进行判断。**
+**主 Thread 不应直接机械拼接所有子 Thread 的代码。最终代码必须作为一个完整项目进行判断。**
 
 ## Changelog 版本管理
 
@@ -66,7 +66,7 @@
 
 ### 用户未提出 Git 要求
 
-主 Session（流程统筹 Agent）在完成开发后应提醒用户：
+主 Thread（流程统筹 Agent）在完成开发后应提醒用户：
 - 当前修改是否已经完成
 - 是否需要执行 Git commit
 - 是否需要创建 tag
@@ -76,7 +76,7 @@
 
 ## README 文档
 
-项目交付时，主 Session 必须检查 README。
+项目交付时，主 Thread 必须检查 README。
 
 ### README 应至少包含
 
@@ -112,15 +112,15 @@ npm run build
 
 ## 最终交付检查清单
 
-在最终向用户交付之前，主 Session 应确认：
+在最终向用户交付之前，主 Thread 应确认：
 
 - [ ] 需求已经实现
-- [ ] 子 Session 的修改已经全部验收
+- [ ] 子 Thread 的修改已经全部验收
 - [ ] 没有明显超出需求范围的功能
-- [ ] 各级测试报告齐全，跨子 Session 交集和启动冒烟已验证
+- [ ] 各级测试报告齐全，跨子 Thread 交集和启动冒烟已验证
 - [ ] Changelog 已更新
 - [ ] UPDATE.MD 已根据版本开发结果更新
-- [ ] Session 注册表已更新（各子 Session 状态置为"待复用"）
+- [ ] Thread 注册表已更新（各子 Thread 状态置为"待复用"）
 - [ ] README 已更新
 - [ ] 依赖和编译方法已经说明
 - [ ] Git 操作要求已经处理或提醒用户
