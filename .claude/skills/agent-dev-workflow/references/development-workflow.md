@@ -6,7 +6,29 @@
 ## 流程总览
 
 ```
-需求理解 → 项目分析 → GitHub 调研 → 需求拆解 → 创建子 Thread → 子 Thread 内部规划 → 子 Agent 执行 → 定向测试 → 验收 → 合并 → 交付
+需求理解 → 项目分析 → GitHub 调研 → 需求拆解 → 创建子 Thread → 子 Thread 内部规划 → 子 Agent 执行 → 子 Agent 自测 → 质量验证 → 验收 → 合并 → 交付
+```
+
+### 测试阶段细分
+
+```
+子 Agent 执行（编码）
+    │
+    ├── 子 Agent 1 完成 → 自测（单元测试）
+    ├── 子 Agent 2 完成 → 自测（单元测试）
+    └── 子 Agent N 完成 → 自测（单元测试）
+    │
+    ▼
+子 Thread 主 Agent 确认所有编写性工作完成
+    │
+    ├── 有交互/功能验证需求 → 启动质量验证 Agent（统一测试）
+    └── 小型任务无交互需求 → 子 Thread 主 Agent 定向抽查
+    │
+    ▼
+子 Thread 主 Agent 验收（审查证据）
+    │
+    ▼
+主 Thread 验收（跨 Thread 交集 + 冒烟测试）
 ```
 
 ## 需求理解阶段
@@ -41,7 +63,7 @@
 创建子 Thread 前：
 
 - 先查 `.m-work-flow/threads/registry.md`，存在同领域待复用 Thread 时优先重新激活，不新建（复用规则见 [thread-management.md](thread-management.md)）
-- 在支持 `create_thread` 的环境中必须真实创建可视化 Thread，命名遵循 `thread-<领域名>`（形态判定与 `create_thread` 规则见 [thread-management.md](thread-management.md)）
+- 在支持 `create_thread` 的环境中必须真实创建可视化 Thread，命名遵循 `thread-<领域名>`；`create_thread` 失败时按降级链依次尝试 `fork_thread` 和子 Agent 模式（形态判定与降级规则见 [thread-management.md](thread-management.md)）
 
 ### 子 Thread 内部拆解
 
@@ -139,15 +161,15 @@
 当用户校验结果并反馈 BUG 或未完成内容时，主 Thread 必须按规范流程处理，而不是直接修复：
 
 ```
-用户反馈 → 问题分析 → 创建子 Thread → 子 Thread 内部规划 → 子 Agent 修复 → 验收 → 交付
+用户反馈 → 问题分析 → 创建子 Thread → 子 Thread 内部规划 → 子 Agent 修复 → 子 Agent 自测 → 质量验证 → 验收 → 交付
 ```
 
-- **主 Thread**：接收反馈并记录 → 分析问题原因和影响范围 → 通过 `create_thread` 将修复工作创建为独立子 Thread → 验收子 Thread 修复结果 → 向用户交付
-- **子 Thread**：将修复任务按标准「子 Thread 任务定义格式」（见 [agent-roles.md](agent-roles.md)）拆解分配给子 Agent → 监督执行 → 验收 → 向主 Thread 汇报
+- **主 Thread**：接收反馈并记录 → 分析问题原因和影响范围 → 通过 `create_thread`（失败时按降级链处理）将修复工作创建为独立子 Thread → 验收子 Thread 修复结果 → 向用户交付
+- **子 Thread**：将修复任务按标准「子 Thread 任务定义格式」（见 [agent-roles.md](agent-roles.md)）拆解分配给子 Agent → 监督执行 → 子 Agent 修复后必须先自测（单元测试）→ 子 Thread 主 Agent 确认自测通过后启动质量验证 Agent 做功能性验证 → 验收 → 向主 Thread 汇报
 
 修复任务的验收标准至少包含：原始问题是否已解决、是否引入新的问题、是否影响其他功能、是否符合项目规范。
 
-禁止行为：主 Thread 直接修复代码；子 Thread 主 Agent 直接修复代码；跳过任务拆解直接执行；跳过验收直接交付；修复范围超出用户反馈。
+禁止行为：主 Thread 直接修复代码；子 Thread 主 Agent 直接修复代码；跳过任务拆解直接执行；跳过自测直接交付；跳过质量验证直接验收；修复范围超出用户反馈。
 
 ### 示例
 
@@ -157,8 +179,10 @@
 2. **创建子 Thread**：按主 Thread 任务拆解格式下发"翻译功能修复"任务（负责自动翻译相关功能；验收标准：自动翻译正常工作、结果正确显示、不影响悬停翻译、错误信息清晰明确）
 3. **子 Thread 内部规划**：按子 Thread 任务定义格式限定允许修改 content.js，禁止修改 background.js、popup.js、manifest.json
 4. **子 Agent 执行修复**
-5. **验收结果**：子 Thread 主 Agent 验收子 Agent；主 Thread 验收子 Thread 整体结果
-6. **交付用户**
+5. **子 Agent 自测**：单元测试验证修复点的基本行为
+6. **质量验证**：子 Thread 主 Agent 确认自测通过后启动质量验证 Agent，模拟用户操作验证自动翻译的完整交互流程
+7. **验收结果**：子 Thread 主 Agent 验收子 Agent；主 Thread 验收子 Thread 整体结果
+8. **交付用户**
 
 ## 超时问询机制
 

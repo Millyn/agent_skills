@@ -31,7 +31,7 @@
 ### 核心概念
 
 - **主 Thread**：整体需求拆解、任务规划、创建子 Thread、最终验收和交付
-- **子 Thread**：任务执行的容器；主 Thread 必须使用 `create_thread` 命令将其创建为真实可视化的独立 Thread
+- **子 Thread**：任务执行的容器；主 Thread 必须使用 `create_thread` 命令将其创建为真实可视化的独立 Thread；`create_thread` 失败时按降级链处理（见 Thread 管理要点）
 - **子 Thread 主 Agent**：子 Thread 内部的规划者，将任务进一步拆解并下发给子 Agent
 - **子 Agent**：具体任务的执行者
 
@@ -51,13 +51,13 @@
 ### 开发流程
 
 ```
-需求理解 → 项目分析 → GitHub 调研 → 需求拆解 → 创建子 Thread → 子 Thread 内部规划 → 子 Agent 执行 → 定向测试 → 验收 → 合并 → 交付
+需求理解 → 项目分析 → GitHub 调研 → 需求拆解 → 创建子 Thread → 子 Thread 内部规划 → 子 Agent 执行 → 子 Agent 自测 → 质量验证 → 验收 → 合并 → 交付
 ```
 
 ### 用户反馈修复流程
 
 ```
-用户反馈 → 问题分析 → 创建子 Thread → 子 Thread 内部规划 → 子 Agent 修复 → 验收 → 交付
+用户反馈 → 问题分析 → 创建子 Thread → 子 Thread 内部规划 → 子 Agent 修复 → 子 Agent 自测 → 质量验证 → 验收 → 交付
 ```
 
 **重要原则**：用户校验后的 BUG 修复和功能完善，也必须按照规范流程分配给子 Thread 处理，主 Thread 不直接修复。
@@ -69,21 +69,24 @@
 3. 子 Thread 必须定义明确的任务边界（含修改范围、影响范围、测试目标、测试边界）
 4. 子 Agent 完成后必须提供标准化报告
 5. 用户反馈的 BUG 和未完成内容，必须分配给子 Thread 处理
-6. 测试唯一责任制：同一修改范围的完整测试只执行一次；任务执行 Agent 只做最小自测，质量验证 Agent 是唯一正式定向测试层，各级验收复用结论不重跑
+6. 测试唯一责任制：子 Agent 自测 = 单元测试；质量验证 Agent = 交互/功能测试，所有编写性工作完成后统一启动；各级验收复用结论不重跑
 7. 开始多 Thread 协作时创建 `.m-work-flow` 目录并加入 `.gitignore`
+8. Thread 创建降级链：`create_thread` 失败 → `fork_thread` → 子 Agent 模式；降级后任务边界和报告格式不变，必须记录实际方式和降级原因
+9. 前后端一致性测试：修改后端业务逻辑时必须验证前端调用和展示，修改前端交互时必须验证后端接口响应；测试报告中必须单独列出跨端验证结论
 
 ### Thread 管理要点
 
 - 支持 `create_thread` 的 GUI 环境（Codex、opencode 等）：主 Thread 必须通过 `create_thread` 将子 Thread 创建为真实、可视化、用户可见的独立 Thread；不支持时才退化为内部子 Thread 并在 `.m-work-flow/threads/` 留痕
+- `create_thread` 失败时的降级顺序：`create_thread` → `fork_thread`（分叉当前 Thread）→ 子 Agent 模式（在当前 Thread 内直接分配任务）；三种方式的任务边界、报告格式、验收流程不变
 - 专项 Thread 按业务域命名（`thread-<领域>`），一个领域一个；已验收的进入"待复用"，同领域新问题优先重新激活，不新建
-- 主 Thread 维护注册表 `.m-work-flow/threads/registry.md`（名称、领域、状态、复用次数）
+- 主 Thread 维护注册表 `.m-work-flow/threads/registry.md`（名称、领域、状态、复用次数、创建方式）
 
 ### 角色分工
 
-- **流程统筹 Agent（主 Thread）**：整体方向、需求拆解、创建子 Thread、任务分配、验收和交付
-- **子 Thread 主 Agent**：子 Thread 内部的任务规划、拆解和下发给子 Agent
-- **任务执行 Agent（子 Agent）**：执行分配的具体任务，不越界
-- **质量验证 Agent**：唯一的正式定向测试层，验证修改范围内的功能并产出测试报告，供各级验收复用
+- **流程统筹 Agent（主 Thread）**：整体方向、需求拆解、创建子 Thread、任务分配、跨子 Thread 交集测试、整体冒烟、验收和交付
+- **子 Thread 主 Agent**：子 Thread 内部的任务规划、拆解、下发给子 Agent、判断测试启动时机、处理多子 Agent 重叠
+- **任务执行 Agent（子 Agent）**：执行分配的具体任务 + 单元测试自测，不越界
+- **质量验证 Agent**：唯一的正式交互/功能测试层，所有编写性工作完成后统一启动，验证修改范围内的功能并产出测试报告，供各级验收复用
 
 GUI 展示固定使用上述稳定职能名称，并与当前任务状态同时显示，例如：`流程统筹 Agent｜工作中`、`Thread:<Thread名称>｜子 Thread 主 Agent｜工作中`。
 

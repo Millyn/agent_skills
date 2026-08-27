@@ -12,15 +12,17 @@ Thread 是**任务执行的容器**，同时是用户可感知、可操作的工
 
 | 形态 | 适用环境 | 要求 |
 |------|---------|------|
-| 可视化 Thread | Codex、opencode 等支持 `create_thread` 的 GUI 多 Thread 环境 | **必须**通过 `create_thread` 命令在界面中创建真实 Thread；使用稳定命名；状态对用户可见 |
-| 内部子 Thread | CLI 或不支持 `create_thread` 的环境 | 在 `.m-work-flow/threads/<thread名称>/` 中建立对应目录，任务边界、报告、通信记录全部落盘 |
+| 可视化 Thread（`create_thread`） | Codex、opencode 等支持 `create_thread` 的 GUI 多 Thread 环境 | **首选**通过 `create_thread` 命令在界面中创建真实 Thread；使用稳定命名；状态对用户可见 |
+| 分叉 Thread（`fork_thread`） | `create_thread` 不可用但支持线程分叉的环境 | 从当前 Thread 分叉出独立执行上下文；用户可感知；在 `.m-work-flow/threads/` 记录分叉原因 |
+| 内部子 Thread / 子 Agent 模式 | CLI、不支持 `create_thread` 和 `fork_thread` 的环境，或前两者均失败时 | 在当前 Thread 内直接分配子 Agent；在 `.m-work-flow/threads/<thread名称>/` 中建立对应目录，任务边界、报告、通信记录全部落盘 |
 
 ### 判定规则
 
 1. 先判断当前环境是否提供 `create_thread` 等创建真实 Thread 的能力。
-2. 支持 → 必须可视化，不得在内部偷偷模拟。
-3. 不支持 → 内部化 + 文件留痕，保证事后可追溯、可交接。
-4. 无法判定时，向用户确认。
+2. 支持 → 优先使用 `create_thread`；失败则尝试 `fork_thread`；再失败则退化为子 Agent 模式。
+3. 不支持 `create_thread` 但支持 `fork_thread` → 使用 `fork_thread`；失败则退化。
+4. 均不支持 → 内部化 + 文件留痕，保证事后可追溯、可交接。
+5. 无法判定时，向用户确认。
 
 ### 子 Agent 层级不受影响
 
@@ -28,10 +30,38 @@ Thread 是**任务执行的容器**，同时是用户可感知、可操作的工
 
 ## create_thread 使用规则
 
-- 主 Thread 开启子 Thread 相当于调用 `create_thread` 命令创建一个真实、独立的 Thread；凡是需要新的执行容器，就必须使用 `create_thread`
+- 主 Thread 开启子 Thread 相当于调用 `create_thread` 命令创建一个真实、独立的 Thread；凡是需要新的执行容器，就必须优先使用 `create_thread`
+- `create_thread` 失败时，按「Thread 创建降级链」依次尝试 `fork_thread` 和子 Agent 模式
 - Agent 不通过 `create_thread` 创建：子 Thread 主 Agent、任务执行 Agent、质量验证 Agent 都位于所属 Thread 内部，由上级 Agent 通过标准任务边界格式下发产生
 - 一个子 Thread 内可以包含多个子 Agent；不需要为每个子 Agent 单独调用 `create_thread`
-- 仅当环境不支持 `create_thread` 或同类创建能力时，才退化为内部子 Thread，并在 `.m-work-flow/threads/` 中完整留痕
+- 仅当环境不支持 `create_thread` 和 `fork_thread`，或两者均失败时，才退化为内部子 Thread / 子 Agent 模式，并在 `.m-work-flow/threads/` 中完整留痕
+
+## Thread 创建降级链
+
+当主 Thread 需要开启新的执行容器但 `create_thread` 调用失败时，按以下顺序降级：
+
+```
+create_thread（首选）
+  ↓ 失败
+fork_thread（从当前 Thread 分叉）
+  ↓ 失败
+在当前 Thread 内直接分配子 Agent 执行（退化为 Agent 模式）
+```
+
+### 各级降级说明
+
+| 级别 | 方式 | 适用场景 | 要求 |
+|------|------|----------|------|
+| 1 | `create_thread` | 环境支持且可用 | 首选，创建真实可视化 Thread |
+| 2 | `fork_thread` | `create_thread` 不可用或调用失败，但环境支持线程分叉 | 从当前 Thread 分叉出独立执行上下文，用户可感知 |
+| 3 | 子 Agent 模式 | 前两者均不可用 | 在当前 Thread 内直接分配子 Agent，任务边界和报告格式不变；在 `.m-work-flow/threads/` 中记录降级原因和实际执行方式 |
+
+### 降级规则
+
+1. 每次创建执行容器时，先尝试 `create_thread`；失败后尝试 `fork_thread`；再失败则退化为子 Agent 模式。
+2. 降级后子 Agent 的任务边界、报告格式、验收流程不变，仅执行容器的隔离级别降低。
+3. 主 Thread 必须在子 Thread 完成报告或注册表中记录实际使用的方式（`create_thread` / `fork_thread` / 子 Agent 模式）和降级原因。
+4. 降级为子 Agent 模式时，多个任务之间需注意文件和逻辑冲突风险，必要时串行执行。
 
 ## 专项 Thread 与复用
 

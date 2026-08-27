@@ -36,17 +36,17 @@ description: |
 ## 开发主流程
 
 ```
-需求理解 → 项目分析 → GitHub 调研 → 需求拆解 → 创建子 Thread → 子 Thread 内部规划 → 子 Agent 执行 → 定向测试 → 验收 → 合并 → 交付
+需求理解 → 项目分析 → GitHub 调研 → 需求拆解 → 创建子 Thread → 子 Thread 内部规划 → 子 Agent 执行 → 子 Agent 自测 → 质量验证 → 验收 → 合并 → 交付
 ```
 
 ## 角色分工
 
 | 角色 | 所处层级 | 一句话职责 |
 |------|---------|-----------|
-| 流程统筹 Agent | 主 Thread | 整体方向、需求拆解、`create_thread` 创建子 Thread、验收和交付 |
-| 子 Thread 主 Agent | 子 Thread | 子 Thread 内部的任务规划、拆解和下发给子 Agent |
-| 任务执行 Agent（子 Agent） | 子 Thread 内 | 执行分配的具体任务，不越界 |
-| 质量验证 Agent（测试 Agent） | 子 Thread 内 | 唯一的正式定向测试层，产出测试报告供各级验收复用 |
+| 流程统筹 Agent | 主 Thread | 整体方向、需求拆解、`create_thread`（失败时按降级链处理）创建子 Thread、跨子 Thread 交集测试、整体冒烟、验收和交付 |
+| 子 Thread 主 Agent | 子 Thread | 子 Thread 内部的任务规划、拆解、下发给子 Agent、判断测试启动时机、处理多子 Agent 重叠 |
+| 任务执行 Agent（子 Agent） | 子 Thread 内 | 执行分配的具体任务 + 单元测试自测，不越界 |
+| 质量验证 Agent（测试 Agent） | 子 Thread 内 | 唯一的正式交互/功能测试层，所有编写性工作完成后统一启动，产出测试报告供各级验收复用 |
 
 角色职责详解、GUI 展示标识、任务边界格式和各类报告模板 → [references/agent-roles.md](references/agent-roles.md)
 
@@ -54,7 +54,7 @@ description: |
 
 - **需求管理**：不臆想需求，有依据才行动；不确定时停止并汇报 → 细则见 [references/development-workflow.md](references/development-workflow.md)
 - **版本管理**：`UPDATE.MD` 是版本计划的事实来源，默认只开发下一版本 → 细则见 [references/version-management.md](references/version-management.md)
-- **测试去重**：同一修改范围的完整测试只执行一次，验收层复用结论不重跑 → 细则见 [references/testing.md](references/testing.md)
+- **测试去重**：子 Agent 自测 = 单元测试；质量验证 Agent = 交互/功能测试，所有编写性工作完成后统一启动；各级验收复用结论不重跑 → 细则见 [references/testing.md](references/testing.md)
 - **用户反馈修复**：BUG 修复必须走"分析 → 拆解 → 分配子 Thread"流程，流程统筹 Agent 不直接修复 → 细则见 [references/development-workflow.md](references/development-workflow.md)
 - **Thread 管理**：支持 `create_thread` 的环境必须创建真实可视化的子 Thread；专项命名、复用优先、注册表维护 → 细则见 [references/thread-management.md](references/thread-management.md)
 - **协作目录**：开始协作时创建 `.m-work-flow` 目录存放上下文、Planner 文件和通信记录，并加入 `.gitignore` → 目录结构与用法见 [references/development-workflow.md](references/development-workflow.md)
