@@ -56,10 +56,9 @@
 - 接收主 Thread 分配的任务，分析任务细节和依赖关系
 - 将任务拆解为最小可执行单元，为每个子 Agent 定义任务边界（使用下文「子 Thread 任务定义格式」）
 - 为子 Agent 提供时间预估和检查点，监督进度并执行超时问询（机制见 [development-workflow.md](development-workflow.md)）
-- **判断测试启动时机**：确认所有子 Agent 编码和自测完成后，决定是否启动质量验证 Agent（判断标准见 [testing.md](testing.md) 测试触发条件）
-- **处理多子 Agent 重叠覆盖**：识别子 Agent 之间的重叠区域，通知主 Thread 创建独立测试 Agent 负责重叠区域的集成测试（协调规则见 [testing.md](testing.md) 多子 Agent 测试协调）
+- **汇总自测结果并汇报主 Thread**：确认所有子 Agent 编码和自测完成后，直接汇总自测结果汇报给主 Thread，无需重复检查单元测试结果
+- **处理多子 Agent 重叠覆盖**：识别子 Agent 之间的重叠区域，通知主 Thread 由主 Thread 创建独立测试 Agent 负责重叠区域的集成测试（协调规则见 [testing.md](testing.md) 多子 Agent 测试协调）
 - 验收子 Agent 完成结果（见下文「验收流程」），向主 Thread 汇报整体完成情况
-- 修改范围很小且风险低时，可不单独分配质量验证 Agent，以任务执行 Agent 自测加主 Agent 定向抽查代替，并在子 Thread 完成报告中记录决定和理由（见 [testing.md](testing.md) 小型任务简化）
 
 ---
 
@@ -274,7 +273,7 @@
     ▼
 子 Thread 主 Agent 再次验收
     │
-    ├── 通过 → 进入质量验证阶段
+    ├── 通过 → 汇总自测结果汇报主 Thread
     └── 不通过 → 再次退回（累计第 2 轮）
     │
     ▼
@@ -283,15 +282,15 @@
 
 **升级条件**：同一子 Agent 同一任务累计 3 轮验收不通过时，必须升级处理。新 Thread 拥有独立的修改范围和任务边界，原子 Agent 的上下文作为参考提供给新 Thread。
 
-### 子 Thread 主 Agent 判断测试启动
+### 子 Thread 主 Agent 汇报主 Thread
 
-所有子 Agent 验收完成后，子 Thread 主 Agent 判断是否启动质量验证 Agent：
+所有子 Agent 验收完成后，子 Thread 主 Agent 直接汇总自测结果汇报给主 Thread：
 
 - 检查所有子 Agent 完成报告和自测结果
 - 确认子 Agent 之间无未解决的冲突
 - 确认依赖关系已满足
-- 决定是否启动质量验证 Agent（或走小型任务简化流程）
-- 启动时向质量验证 Agent 提供完整任务边界和所有子 Agent 的修改清单
+- 直接汇总自测结果汇报给主 Thread，无需重复检查单元测试结果
+- 主 Thread 根据修改范围和风险判断是否需要启动质量验证 Agent
 
 #### 质量验证发现问题处理
 
@@ -301,15 +300,15 @@
 质量验证发现问题
     │
     ▼
-子 Thread 主 Agent 评估问题
+主 Thread 评估问题
     │
-    ├── 问题属于某个子 Agent 的修改范围 → 退回给该子 Agent 修复
-    │       修复后重新自测 → 子 Thread 主 Agent 验收 → 质量验证 Agent 补测
+    ├── 问题属于某个子 Thread 的修改范围 → 退回给该子 Thread 修复
+    │       修复后重新自测 → 子 Thread 主 Agent 汇报主 Thread → 质量验证 Agent 补测
     │
-    ├── 问题属于多子 Agent 交集或集成问题 → 创建独立测试 Agent + 修复子 Agent
+    ├── 问题属于多子 Thread 交集或集成问题 → 创建独立测试 Agent + 修复子 Thread
     │       修复后质量验证 Agent 补测
     │
-    └── 问题属于任务边界设计缺陷 → 汇报主 Thread，由主 Thread 决策
+    └── 问题属于任务边界设计缺陷 → 主 Thread 决策调整边界
 ```
 
 质量验证 Agent 只负责测试和报告，不负责修复。修复由子 Agent 执行，修复后的验证由质量验证 Agent 补测完成。
@@ -337,7 +336,7 @@
     │  修复要求：明确指出问题、限定修复范围
     │
     ▼
-子 Thread 内部执行修复（子 Agent 修复 → 自测 → 质量验证）
+子 Thread 内部执行修复（子 Agent 修复 → 自测 → 汇报主 Thread）
     │
     ▼
 主 Thread 再次验收

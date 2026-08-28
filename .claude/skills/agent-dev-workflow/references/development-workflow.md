@@ -19,15 +19,14 @@
     └── 子 Agent N 完成 → 自测（单元测试）
     │
     ▼
-子 Thread 主 Agent 确认所有编写性工作完成
-    │
-    ├── 有交互/功能验证需求 → 启动质量验证 Agent（统一测试）
-    └── 小型任务无交互需求 → 子 Thread 主 Agent 定向抽查
+子 Thread 主 Agent 汇总自测结果
+    │  无需重复检查单元测试结果
     │
     ▼
-子 Thread 主 Agent 验收（审查证据）
-    │  ├── 不通过 → 退回子 Agent 修复（≤3 轮循环）
-    │  └── 3 轮不通过 → 升级：主 Thread 创建新 Thread 修复
+主 Thread 安排后续测试流程
+    │  ├── 有交互/功能验证需求 → 启动质量验证 Agent（统一测试）
+    │  └── 小型任务无交互需求 → 主 Thread 定向抽查
+    │
     ▼
 主 Thread 验收（跨 Thread 交集 + 冒烟测试）
     │  ├── 不通过 → 打回子 Thread 修复（≤3 轮循环）
@@ -166,11 +165,11 @@
 当用户校验结果并反馈 BUG 或未完成内容时，主 Thread 必须按规范流程处理，而不是直接修复：
 
 ```
-用户反馈 → 问题分析 → 创建子 Thread → 子 Thread 内部规划 → 子 Agent 修复 → 子 Agent 自测 → 质量验证 → 验收 → 交付
+用户反馈 → 问题分析 → 创建子 Thread → 子 Thread 内部规划 → 子 Agent 修复 → 子 Agent 自测 → 汇报主 Thread → 主 Thread 安排验证 → 验收 → 交付
 ```
 
 - **主 Thread**：接收反馈并记录 → 分析问题原因和影响范围 → 通过 `create_thread`（失败时按降级链处理）将修复工作创建为独立子 Thread → 验收子 Thread 修复结果 → 向用户交付
-- **子 Thread**：将修复任务按标准「子 Thread 任务定义格式」（见 [agent-roles.md](agent-roles.md)）拆解分配给子 Agent → 监督执行 → 子 Agent 修复后必须先自测（单元测试）→ 子 Thread 主 Agent 确认自测通过后启动质量验证 Agent 做功能性验证 → 验收 → 向主 Thread 汇报
+- **子 Thread**：将修复任务按标准「子 Thread 任务定义格式」（见 [agent-roles.md](agent-roles.md)）拆解分配给子 Agent → 监督执行 → 子 Agent 修复后必须先自测（单元测试）→ 子 Thread 主 Agent 汇总自测结果后直接汇报给主 Thread → 主 Thread 统一安排后续验证流程 → 验收 → 向用户交付
 
 修复任务的验收标准至少包含：原始问题是否已解决、是否引入新的问题、是否影响其他功能、是否符合项目规范。
 
@@ -187,9 +186,10 @@
 3. **子 Thread 内部规划**：按子 Thread 任务定义格式限定允许修改 content.js，禁止修改 background.js、popup.js、manifest.json
 4. **子 Agent 执行修复**
 5. **子 Agent 自测**：单元测试验证修复点的基本行为
-6. **质量验证**：子 Thread 主 Agent 确认自测通过后启动质量验证 Agent，模拟用户操作验证自动翻译的完整交互流程
-7. **验收结果**：子 Thread 主 Agent 验收子 Agent；主 Thread 验收子 Thread 整体结果
-8. **交付用户**
+6. **汇报主 Thread**：子 Thread 主 Agent 汇总自测结果后直接汇报给主 Thread
+7. **主 Thread 安排验证**：主 Thread 根据修改范围判断是否需要启动质量验证 Agent 进行功能性验证
+8. **验收结果**：主 Thread 验收子 Thread 整体结果
+9. **交付用户**
 
 ## 超时问询机制
 
