@@ -150,13 +150,15 @@
 ├── communication/              # 主 Thread 通信记录
 │   ├── main-thread/
 │   └── final-reports/
-└── timeline/                   # 时间跟踪
-    └── timeout-monitor.md
+├── timeline/                   # 时间跟踪
+│   └── timeout-monitor.md
+└── password.md                 # 环境配置密钥文件
 ```
 
 - **context/**：项目关键文件摘要、代码结构分析、相关配置信息、需求文档摘要——避免子 Thread / 子 Agent 重复读取项目文件
 - **planner/**：主 Thread 任务拆解计划、子 Thread 划分方案、子 Agent 分配方案、时间预估和进度跟踪
 - **communication/ 与 threads/\*/reports/**：主 Thread 与子 Thread 的通信记录、子 Agent 与子 Thread 的完成报告、验收结果
+- **password.md**：存放开发环境必要的密钥、密码、邀请码、数值等校验数据，便于测试使用
 
 如果项目存在 Git 环境，必须将 `.m-work-flow/` 添加到 `.gitignore`：它是临时工作目录，包含各级通信内容，不应提交到版本控制系统，避免污染项目历史记录。
 
